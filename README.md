@@ -1,2 +1,2 @@
 # heidenhain_project
-Code for GUI form in BS
+Code for GUI form in VS
