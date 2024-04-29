@@ -1,0 +1,94 @@
+using System;
+using System.Windows.Forms;
+using Excel = Microsoft.Office.Interop.Excel;
+
+namespace ExcelDataTransfer
+{
+    public partial class Form1 : Form
+    {
+        Excel.Application excelApp;
+        Excel.Workbook workbook;
+        Excel.Worksheet worksheet;
+
+        string excelFilePath;
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void btnTransfer_Click(object sender, EventArgs e)
+        {
+            if (excelApp == null || workbook == null || worksheet == null)
+            {
+                // If Excel objects are not initialized, ask for file location
+                OpenFileDialog openFileDialog = new OpenFileDialog();
+                openFileDialog.Filter = "Excel Files (*.xlsx)|*.xlsx";
+                openFileDialog.Title = "Open Excel File";
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    excelFilePath = openFileDialog.FileName;
+
+                    // Initialize Excel objects
+                    excelApp = new Excel.Application();
+                    excelApp.Visible = true; // Make Excel application visible
+                    workbook = excelApp.Workbooks.Open(excelFilePath);
+                    worksheet = workbook.ActiveSheet as Excel.Worksheet;
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            // Find the next empty row
+            int nextRow = worksheet.Cells[worksheet.Rows.Count, 1].End[Excel.XlDirection.xlUp].Row + 1;
+
+            // Transfer textbox value to Excel
+            worksheet.Cells[nextRow, 1].Value = textBox1.Text;
+
+            try
+            {
+                // Save changes
+                workbook.Save();
+                MessageBox.Show("Data transferred to Excel successfully!");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error occurred while saving data to Excel: " + ex.Message);
+            }
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Release Excel objects when the form is closing
+            if (excelApp != null)
+            {
+                workbook.Close();
+                excelApp.Quit();
+
+                releaseObject(worksheet);
+                releaseObject(workbook);
+                releaseObject(excelApp);
+            }
+        }
+
+        private void releaseObject(object obj)
+        {
+            try
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
+                obj = null;
+            }
+            catch (Exception ex)
+            {
+                obj = null;
+                MessageBox.Show("Exception Occurred while releasing object " + ex.ToString());
+            }
+            finally
+            {
+                GC.Collect();
+            }
+        }
+    }
+}
