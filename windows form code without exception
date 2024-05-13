@@ -1,0 +1,130 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using Excel = Microsoft.Office.Interop.Excel;
+
+namespace Heidenhainproject
+{
+    public partial class Form1 : Form
+    {
+        Excel.Application excelApp;
+        Excel.Workbook workbook;
+        Excel.Worksheet worksheet;
+        string excelFilePath;
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            // Send data button 
+            if (excelApp == null || workbook == null || worksheet == null)
+            {
+                // If Excel objects are not initialized, ask for file location
+                OpenFileDialog openFileDialog = new OpenFileDialog();
+                openFileDialog.Filter = "Excel Files (*.xlsx)|*.xlsx";
+                openFileDialog.Title = "Open Excel File";
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    excelFilePath = openFileDialog.FileName;
+
+                    // Initialize Excel objects
+                    excelApp = new Excel.Application();
+                    excelApp.Visible = true; // Make Excel application visible
+                    workbook = excelApp.Workbooks.Open(excelFilePath);
+                    worksheet = workbook.ActiveSheet as Excel.Worksheet;
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            // Find the next empty row
+            int nextRow = 1;
+            int nextColumn = 5; // Start from column E
+
+            while (worksheet.Cells[nextRow, nextColumn].Value != null || worksheet.Cells[nextRow, nextColumn].Value != null)
+            {
+                // If both columns in the current row are filled, move to the next row
+                if (worksheet.Cells[nextRow, nextColumn].Value != null && worksheet.Cells[nextRow, nextColumn + 1].Value != null)
+                {
+                    nextRow++;
+                    nextColumn = 5; // Start again from column E
+                }
+                else
+                {
+                    // Move to the next column
+                    if (worksheet.Cells[nextRow, nextColumn].Value != null)
+                        nextColumn++;
+                    else
+                        nextColumn += 1; // Move to the next pair of columns (E and F)
+                }
+            }
+
+            // Transfer textbox value to Excel
+            if (worksheet.Cells[nextRow, nextColumn].Value == null)
+                worksheet.Cells[nextRow, nextColumn].Value = textBox1.Text;
+            else
+                worksheet.Cells[nextRow, nextColumn].Value = textBox1.Text;
+
+            
+            
+            try
+            {
+                // Save changes
+                workbook.Save();
+                MessageBox.Show("Data transferred to Excel successfully!");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error occurred while saving data to Excel: " + ex.Message);
+            }
+        }
+        
+    
+private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Release Excel objects when the form is closing
+            if (excelApp != null)
+            {
+                workbook.Close();
+                excelApp.Quit();
+
+                releaseObject(worksheet);
+                releaseObject(workbook);
+                releaseObject(excelApp);
+            }
+        }
+
+        private void releaseObject(object obj)
+        {
+            try
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
+                obj = null;
+            }
+            catch (Exception ex)
+            {
+                obj = null;
+                MessageBox.Show("Exception Occurred while releasing object " + ex.ToString());
+            }
+            finally
+            {
+                GC.Collect();
+            }
+        }
+    }
+} 
