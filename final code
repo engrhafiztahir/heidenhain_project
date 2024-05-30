@@ -1,0 +1,219 @@
+public partial class Form1 : Form
+{
+    Excel.Application excelApp;
+    Excel.Workbook workbook;
+    Excel.Worksheet worksheet;
+    string excelFilePath;
+    SerialPort serialPort;
+
+    public Form1()
+    {
+        InitializeComponent();
+        serialPort = new SerialPort();
+        serialPort.DataReceived += serialPort_DataReceived;
+    }
+
+    private void Form1_Load(object sender, EventArgs e)
+    {
+        string[] ports = SerialPort.GetPortNames();
+        foreach (string port in ports)
+        {
+            comboBox.Items.Add(port);
+        }
+    }
+
+    private void button1_Click(object sender, EventArgs e)
+    {
+        // Send data request to the serial port
+        serialPort.Write(new byte[] { 0x02 }, 0, 1);
+    }
+
+    private void ProcessDataAndSendToExcel()
+    {
+        // Ensure that the textbox has data before proceeding
+        if (string.IsNullOrEmpty(textBox.Text))
+        {
+            MessageBox.Show("No data received from the serial port.");
+            return;
+        }
+
+        // If Excel objects are not initialized or Excel application is not running, initialize Excel objects
+        if (excelApp == null || workbook == null || worksheet == null || !IsExcelRunning())
+        {
+            // If Excel is not running, ask for file location
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "Excel Files (*.xlsx)|*.xlsx";
+            openFileDialog.Title = "Open Excel File";
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                excelFilePath = openFileDialog.FileName;
+
+                // Initialize Excel objects
+                excelApp = new Excel.Application();
+                excelApp.Visible = true; // Make Excel application visible
+                workbook = excelApp.Workbooks.Open(excelFilePath);
+                worksheet = workbook.ActiveSheet as Excel.Worksheet;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        // Find the next empty row and column
+        int nextRow = 10;
+        int nextColumn = 5; // Start from column E
+
+        while (worksheet.Cells[nextRow, nextColumn].Value != null || worksheet.Cells[nextRow, nextColumn + 1].Value != null)
+        {
+            // If both columns in the current row are filled, move to the next row
+            if (worksheet.Cells[nextRow, nextColumn].Value != null && worksheet.Cells[nextRow, nextColumn + 1].Value != null)
+            {
+                nextRow++;
+                nextColumn = 5; // Start again from column E
+            }
+            else
+            {
+                // Move to the next column
+                if (worksheet.Cells[nextRow, nextColumn].Value != null)
+                    nextColumn++;
+                else
+                    nextColumn += 1; // Move to the next pair of columns (E and F)
+            }
+        }
+
+        // Transfer textbox value to Excel
+        worksheet.Cells[nextRow, nextColumn].Value = textBox.Text;
+
+        try
+        {
+            // Save changes
+            workbook.Save();
+            MessageBox.Show("Data transferred to Excel successfully!");
+            textBox.Text = ""; // Clear the textbox after successful transfer
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Error occurred while saving data to Excel: " + ex.Message);
+        }
+    }
+
+    private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+    {
+        if (excelApp != null)
+        {
+            workbook.Close();
+            excelApp.Quit();
+            releaseObject(worksheet);
+            releaseObject(workbook);
+            releaseObject(excelApp);
+        }
+    }
+
+    private void serialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
+    {
+        string data = serialPort.ReadExisting();
+        ProcessReceivedData(data);
+    }
+
+    private void ProcessReceivedData(string rawData)
+    {
+        string trimmedData = rawData.Trim();
+        byte[] bytes = Encoding.ASCII.GetBytes(trimmedData);
+        string asciiData = Encoding.ASCII.GetString(bytes);
+        UpdateGUI(asciiData);
+    }
+
+    private void UpdateGUI(string data)
+    {
+        this.Invoke(new Action(() =>
+        {
+            textBox.AppendText(data);
+            ProcessDataAndSendToExcel(); // Call the method to process data and send it to Excel
+        }));
+    }
+
+    private void releaseObject(object obj)
+    {
+        try
+        {
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
+            obj = null;
+        }
+        catch (Exception ex)
+        {
+            obj = null;
+            MessageBox.Show("Exception Occurred while releasing object " + ex.ToString());
+        }
+        finally
+        {
+            GC.Collect();
+        }
+    }
+
+    private bool IsExcelRunning()
+    {
+        // Check if Excel is running
+        bool excelRunning = false;
+        System.Diagnostics.Process[] processes = System.Diagnostics.Process.GetProcessesByName("excel");
+        if (processes.Length > 0)
+        {
+            excelRunning = true;
+        }
+        return excelRunning;
+    }
+
+    private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+    {
+    }
+
+    private void button2_Click(object sender, EventArgs e)
+    {
+        if (!serialPort.IsOpen)
+        {
+            try
+            {
+                btnopen.Enabled = false;
+                btnclose.Enabled = true;
+                serialPort.PortName = comboBox.SelectedItem.ToString();
+                serialPort.BaudRate = 9600;
+                serialPort.DataBits = 8;
+                serialPort.Parity = Parity.None;
+                serialPort.StopBits = StopBits.One;
+                serialPort.Handshake = Handshake.RequestToSend;
+                serialPort.DtrEnable = true;
+                serialPort.RtsEnable = true;
+                serialPort.Open();
+                MessageBox.Show("Serial Port open successfully");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error opening the port" + ex.Message);
+            }
+        }
+        else
+        {
+            MessageBox.Show("Port is already open");
+        }
+    }
+
+    private void btnclose_Click(object sender, EventArgs e)
+    {
+        if (serialPort.IsOpen)
+        {
+            serialPort.Close();
+            MessageBox.Show("Port closed successfully!");
+            btnopen.Enabled = true;
+            btnclose.Enabled = false;
+        }
+        else
+        {
+            MessageBox.Show("Port is already closed.");
+        }
+    }
+
+    private void button4_Click(object sender, EventArgs e)
+    {
+        textBox.Text = "";
+    }
+}
