@@ -1,0 +1,96 @@
+using System;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using Excel = Microsoft.Office.Interop.Excel;
+
+namespace Heidenhainproject
+{
+    public partial class Form1 : Form
+    {
+        Excel.Application excelApp;
+        Excel.Workbook workbook;
+        Excel.Worksheet worksheet;
+        string excelFilePath;
+        int nextRow = 17; // Start from row 17
+        int nextColumn = 4; // Start from column 4
+        bool isFileLoaded = false; // To check if the file has been loaded
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            // You can load the Excel file here if you want to load it when the form starts
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Load the Excel file only once when it's not already loaded
+                if (!isFileLoaded)
+                {
+                    OpenFileDialog openFileDialog = new OpenFileDialog();
+                    openFileDialog.Filter = "Excel Files (*.xlsx)|*.xlsx";
+                    openFileDialog.Title = "Open Excel File";
+
+                    if (openFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        excelFilePath = openFileDialog.FileName;
+
+                        excelApp = new Excel.Application();
+                        excelApp.Visible = true;
+                        workbook = excelApp.Workbooks.Open(excelFilePath);
+                        worksheet = workbook.ActiveSheet as Excel.Worksheet;
+
+                        isFileLoaded = true; // Set the flag to indicate the file is loaded
+                    }
+                    else
+                    {
+                        return; // Exit if the user cancels file selection
+                    }
+                }
+
+                // Write data into the next available cell in the current row and column
+                worksheet.Cells[nextRow, nextColumn].Value = textBox1.Text;
+
+                // Update the column for the next input
+                nextColumn++;
+
+                // If columns 4 to 7 are filled, move to the next row
+                if (nextColumn > 7)
+                {
+                    nextRow++;
+                    nextColumn = 4; // Reset to column 4
+                }
+
+                // Save the workbook after each entry (without reopening)
+                workbook.Save();
+                MessageBox.Show("Data transferred to Excel successfully!");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error occurred while transferring data to Excel: " + ex.Message);
+            }
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Ensure the workbook and Excel application are properly closed when the form closes
+            if (excelApp != null)
+            {
+                workbook.Close();
+                excelApp.Quit();
+                Marshal.ReleaseComObject(worksheet);
+                Marshal.ReleaseComObject(workbook);
+                Marshal.ReleaseComObject(excelApp);
+
+                worksheet = null;
+                workbook = null;
+                excelApp = null;
+            }
+        }
+    }
+}
