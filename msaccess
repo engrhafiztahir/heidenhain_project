@@ -1,0 +1,59 @@
+ChatGPT
+
+You said:
+I have a query related to ms access
+ChatGPT said:
+ChatGPT
+What query do you have related to MS Access? Let me know the details, and I'll do my best to assist you!
+
+
+
+
+
+
+
+You said:
+I have designed a form in ms access and these are entries serial number, ID, description, calibration date, calibration due date and Remarks. Now I want to design a query in which show me all the equipments whose calibration has passed with respect to today. Second on each of the due items displayed number of days due. For example if some item has due yesterday then on the remarks of that item query must show 1 day. And each time I add a new record then query must update itself. 
+ChatGPT said:
+ChatGPT
+To create the query in MS Access that lists all equipment whose calibration is overdue with the number of days passed, you can follow these steps:
+
+1. Create a Query for Overdue Items
+First, we need to design a query that checks if the Calibration Due Date has passed compared to today's date and calculate the number of days overdue.
+
+Here’s how to set it up:
+
+Open your MS Access database and go to the Query Design.
+
+Add the table where your data is stored (the table that includes fields like Serial Number, ID, Description, Calibration Date, Calibration Due Date, and Remarks).
+
+In the query design grid, add the following fields:
+
+Serial Number
+ID
+Description
+Calibration Date
+Calibration Due Date
+Condition to Show Overdue Equipment: In the Criteria row under Calibration Due Date, add this condition:
+
+sql
+Copy code
+< Date()
+This condition will ensure that only items where the Calibration Due Date is less than today's date (i.e., overdue) are shown.
+
+Calculate Days Overdue: To calculate how many days the calibration is overdue, you can create a calculated field. In the next available column of the query grid, type the following expression:
+
+sql
+Copy code
+DaysOverdue: Date() - [Calibration Due Date]
+This will create a new column called DaysOverdue that calculates the difference between today's date and the Calibration Due Date.
+
+Remarks for Overdue Days: If you want to add a custom remark based on the number of overdue days, create another calculated field like this:
+
+sql
+Copy code
+Remarks: IIf(Date()-[Calibration Due Date]=1, "1 day", Date()-[Calibration Due Date] & " days")
+This will show "1 day" if the item is overdue by a single day and the number of days otherwise.
+
+DaysOverdue: IIf([Calibration Due Date] < Date(), Date() - [Calibration Due Date], Null)
+
