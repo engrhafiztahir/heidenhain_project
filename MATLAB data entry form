@@ -1,0 +1,121 @@
+classdef LoginApp < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure             matlab.ui.Figure
+        UsernameEditField    matlab.ui.control.EditField
+        PasswordEditField    matlab.ui.control.EditField
+        UsernameLabel        matlab.ui.control.Label
+        PasswordLabel        matlab.ui.control.Label
+        SubmitButton         matlab.ui.control.Button
+        MessageLabel         matlab.ui.control.Label
+    end
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Button pushed function: SubmitButton
+        function onSubmitButtonPushed(app, event)
+            % Get input data
+            username = app.UsernameEditField.Value;
+            password = app.PasswordEditField.Value;
+
+            % Check for empty fields
+            if isempty(username) || isempty(password)
+                app.MessageLabel.Text = 'Error: Fields cannot be empty.';
+                app.MessageLabel.FontColor = [1 0 0]; % Red color for error
+                return;
+            end
+
+            % Excel file name
+            fileName = 'UserData.xlsx';
+
+            % Check if Excel file exists
+            if isfile(fileName)
+                % Read existing data
+                [~, ~, data] = xlsread(fileName);
+            else
+                % Initialize data
+                data = {'Username', 'Password'};
+            end
+
+            % Append new data
+            newRow = {username, password};
+            data = [data; newRow];
+
+            % Write data to Excel
+            try
+                xlswrite(fileName, data);
+                app.MessageLabel.Text = 'Data saved successfully!';
+                app.MessageLabel.FontColor = [0 0.5 0]; % Green color for success
+            catch
+                app.MessageLabel.Text = 'Error: Could not save to Excel.';
+                app.MessageLabel.FontColor = [1 0 0]; % Red color for error
+            end
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create components
+        function createComponents(app)
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.Position = [100 100 400 300];
+            app.UIFigure.Name = 'Login Form';
+
+            % Create UsernameLabel
+            app.UsernameLabel = uilabel(app.UIFigure);
+            app.UsernameLabel.HorizontalAlignment = 'right';
+            app.UsernameLabel.Position = [50 210 70 22];
+            app.UsernameLabel.Text = 'Username:';
+
+            % Create UsernameEditField
+            app.UsernameEditField = uieditfield(app.UIFigure, 'text');
+            app.UsernameEditField.Position = [140 210 200 22];
+
+            % Create PasswordLabel
+            app.PasswordLabel = uilabel(app.UIFigure);
+            app.PasswordLabel.HorizontalAlignment = 'right';
+            app.PasswordLabel.Position = [50 170 70 22];
+            app.PasswordLabel.Text = 'Password:';
+
+            % Create PasswordEditField
+            app.PasswordEditField = uieditfield(app.UIFigure, 'text');
+            app.PasswordEditField.Position = [140 170 200 22];
+            app.PasswordEditField.ValueDisplayFormat = 'Password';
+
+            % Create SubmitButton
+            app.SubmitButton = uibutton(app.UIFigure, 'push');
+            app.SubmitButton.Position = [150 110 100 30];
+            app.SubmitButton.Text = 'Submit';
+            app.SubmitButton.ButtonPushedFcn = createCallbackFcn(app, @onSubmitButtonPushed, true);
+
+            % Create MessageLabel
+            app.MessageLabel = uilabel(app.UIFigure);
+            app.MessageLabel.HorizontalAlignment = 'center';
+            app.MessageLabel.Position = [50 60 300 22];
+            app.MessageLabel.Text = '';
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = LoginApp
+            % Create and configure components
+            createComponents(app)
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+end
