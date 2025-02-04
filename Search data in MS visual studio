@@ -1,0 +1,92 @@
+Since you've already created a program to save data in an Excel sheet, I'll guide you on how to search data from the Excel sheet and display it in a TextBox in your C# Windows Forms project.
+
+Steps to Search Data in Excel and Display it in a TextBox
+1. Add Required References
+You'll need to use the Microsoft.ACE.OLEDB provider. If you're working with .xlsx files, ensure you have Microsoft Access Database Engine installed.
+
+Install the Access Database Engine from here if needed.
+Add the System.Data.OleDb namespace.
+2. Code to Search Data in Excel
+Modify your form by adding:
+
+TextBox (txtSearch) – for input.
+Button (btnSearch) – to trigger the search.
+TextBox (txtResult) – to display the found data.
+Code Example
+csharp
+Copy code
+using System;
+using System.Data;
+using System.Data.OleDb;
+using System.Windows.Forms;
+
+namespace ExcelSearch
+{
+    public partial class Form1 : Form
+    {
+        string excelPath = @"C:\Path\To\Your\File.xlsx";  // Change to your Excel file path
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+            string searchValue = txtSearch.Text.Trim();
+            if (string.IsNullOrWhiteSpace(searchValue))
+            {
+                MessageBox.Show("Please enter a value to search.");
+                return;
+            }
+
+            try
+            {
+                // Connection String for Excel (.xlsx)
+                string connStr = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={excelPath};Extended Properties='Excel 12.0 Xml;HDR=YES;'";
+
+                using (OleDbConnection conn = new OleDbConnection(connStr))
+                {
+                    conn.Open();
+                    string query = "SELECT * FROM [Sheet1$] WHERE [ID] = @search";  // Change 'ID' to your column name
+                    using (OleDbCommand cmd = new OleDbCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@search", searchValue);
+                        OleDbDataAdapter da = new OleDbDataAdapter(cmd);
+                        DataTable dt = new DataTable();
+                        da.Fill(dt);
+
+                        if (dt.Rows.Count > 0)
+                        {
+                            txtResult.Text = dt.Rows[0]["Name"].ToString();  // Change 'Name' to the column you want to display
+                        }
+                        else
+                        {
+                            MessageBox.Show("No record found.");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+            }
+        }
+    }
+}
+How It Works
+Connects to the Excel file using OLEDB.
+Searches the ID column in "Sheet1" (modify for your Excel structure).
+If a match is found, it displays the "Name" value in txtResult.
+Modifications Based on Your Excel Structure
+Change "Sheet1$" if your sheet has a different name.
+Replace ID and Name with your actual column names.
+Would you like to fetch multiple results in a DataGridView instead?
+
+
+
+
+
+
+
+
