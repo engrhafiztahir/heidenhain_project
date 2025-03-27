@@ -1,0 +1,47 @@
+using System;
+using System.IO.Ports;
+
+class RS232Communication
+{
+    static void Main()
+    {
+        // Create a new SerialPort object
+        SerialPort serialPort = new SerialPort();
+
+        // Configure the SerialPort settings
+        serialPort.PortName = "COM1";  // Replace with your port name
+        serialPort.BaudRate = 9600;    // Replace with your baud rate
+        serialPort.Parity = Parity.None;
+        serialPort.DataBits = 8;
+        serialPort.StopBits = StopBits.One;
+        serialPort.Handshake = Handshake.None;
+        serialPort.ReadTimeout = 500;  // Timeout for reading
+        serialPort.WriteTimeout = 500; // Timeout for writing
+
+        try
+        {
+            // Open the serial port
+            serialPort.Open();
+
+            // Send the *IDN? command as bytes
+            byte[] commandBytes = new byte[] { 42, 73, 68, 78, 63 }; // ASCII for *IDN?
+            serialPort.Write(commandBytes, 0, commandBytes.Length);
+
+            // Read the response (assuming response ends with a newline)
+            string response = serialPort.ReadLine();
+
+            // Display the response
+            Console.WriteLine("Response: " + response);
+
+            // Optionally, save the response to a variable or file
+            string deviceInfo = response;
+
+            // Close the serial port
+            serialPort.Close();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+        }
+    }
+}
