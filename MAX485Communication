@@ -1,0 +1,254 @@
+#include <MAX_RS485.h>
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(13,12,11,10,9,8);
+// Buttons
+int PowerButton = A0; // Power btn
+int ArmButton = A1; // Arm btn
+int SafeButton = 2; // Safe btn
+int FireButton = 3; // Fire btn
+int ResetButton = A2; // RESET Btn
+
+//int RESETButton = 4;
+// LEDs
+int LED1 = 7; // Power LED
+int LED2 = 6; // Arm LED
+int LED3 = 5; // Safe LED
+int LED4 = 4; // Fire LED
+int LED5 = A4; // Reset LED
+bool PowerState = true;
+bool ArmState = true;
+bool SafeState = true;
+bool FireState = true;
+bool lastReset = LOW, lastPower = HIGH, lastArm = HIGH, lastSafe = HIGH, lastFire = LOW;
+
+int flag1; int flag2 = 0,flag3 = 0,flag4 = 0,flag5 = 0;
+
+// For communication
+int DE = A5;
+int RE = A5;
+int receiveData;
+void setup()
+{
+  Serial.begin(9600);
+  lcd.begin(16,2);
+  lcd.setCursor(0,0);
+  pinMode(A0,INPUT); // Power button
+  pinMode(A1,INPUT); // Arm button
+  pinMode(A2,INPUT); // Reset Button
+  pinMode(2,INPUT); // Safe Button
+  pinMode(3,INPUT); // Fire Button
+
+  pinMode(7,OUTPUT);
+  pinMode(6,OUTPUT);
+  pinMode(5,OUTPUT);
+  pinMode(4,OUTPUT);
+  pinMode(A4,OUTPUT);
+  // LEDs
+  digitalWrite(LED1,LOW);
+  digitalWrite(LED2,LOW);
+  digitalWrite(LED3,LOW);
+  digitalWrite(LED4,LOW);
+
+  // Communication OUTPUTS
+  pinMode(RE, OUTPUT);
+  pinMode(DE, OUTPUT);
+  //delay(2000);
+  lcd.clear();
+  //lcd.display();
+  if (flag1 == 0)
+  {
+    lcd.setCursor(1,0);
+    lcd.print("Electronic S&A");
+    lcd.setCursor(0,1);
+    lcd.print("Developed by:EES");
+    delay(1000);
+    lcd.clear(),flag1 = 1;
+  }
+}
+
+void loop()
+{
+  Serial.write('1');
+  //delay(100);
+  //////
+  bool CurrPower = digitalRead(PowerButton);
+  bool CurrArm = digitalRead(ArmButton);
+  bool CurrSafe = digitalRead(SafeButton);
+  bool CurrFire = digitalRead(FireButton);
+  bool CurrReset = digitalRead(ResetButton);
+
+  //RESET LED
+  if ( CurrReset == HIGH && lastReset == LOW)
+  {
+    digitalWrite(RE,HIGH);
+    digitalWrite(DE,HIGH);
+    Serial.write('R');
+    ArmState = false;
+    SafeState = false;
+    FireState = false;
+    PowerState = false;
+    digitalWrite(LED1,LOW);
+    digitalWrite(LED2,LOW);
+    digitalWrite(LED3,LOW);
+    digitalWrite(LED4,LOW);
+    digitalWrite(LED5, HIGH), lcd.clear();
+    lcd.clear();
+    lcd.setCursor(1,0);
+    lcd.print("PRESS POWER ON");
+    delay(1000);
+    flag2=0;
+  }
+  else
+  {
+    // Power LED
+    if ( (CurrPower == HIGH) && lastPower == HIGH && flag2==0 )
+    {
+      digitalWrite(RE,HIGH);
+      digitalWrite(DE,HIGH);
+      Serial.write('P');
+      lcd.clear();
+      lcd.setCursor(4,0), lcd.print("Power ON"), flag2=1, flag3=0;
+      lcd.setCursor(2,1), lcd.print("Ready for ARM");
+      digitalWrite(LED1,HIGH);
+      PowerState = true;
+      ArmState = false;
+      SafeState = false;
+    }
+    else if ((CurrPower == HIGH) && lastPower == HIGH && flag3==1)
+    {
+      digitalWrite(RE,HIGH);
+      digitalWrite(DE,HIGH);
+      flag2 = 1;
+    }
+    
+    // arm LED
+    if ( (CurrArm == HIGH && lastArm == HIGH && PowerState == HIGH && ArmState == 0)
+    {
+      digitalWrite(RE,HIGH);
+      digitalWrite(DE,HIGH);
+      Serial.write('A');
+      ArmState = true;
+      FireState = false;
+      SafeState = false;
+      //flag2 = 1;
+      flag3=1;
+      lcd.clear();
+      lcd.setCursor(4,0);
+      lcd.print("ARM OK");
+      digitalWrite(LED2,LOW);
+      digitalWrite(LED3,HIGH);
+      digitalWrite(LED4,LOW);
+      digitalWrite(LED5, LOW);
+    }
+    // Safe LED after pressing arm
+    else if ((CurrSafe == HIGH)&& lastSafe == HIGH && PowerState == HIGH && ArmState == 1
+    flag3 ==1)
+    {
+      digitalWrite(RE,HIGH);
+      digitalWrite(DE,HIGH);
+      Serial.write('S');
+      lcd.clear();
+    }
+    // Fire LED
+    if (CurrFire == HIGH && lastFire == LOW && FireState == LOW && PowerState == HIGH && ArmState == 1 && SafeState == 1 && flag4 ==0)
+    {
+      digitalWrite(RE,HIGH);
+      digitalWrite(DE,HIGH);
+      Serial.write('F');
+      lcd.clear();
+      lcd.setCursor(4,0);
+      lcd.print("FIRE");
+      ArmState = true;
+      FireState= true;
+      flag2 = 1;
+      flag3 = 1;
+      flag4 = 1;
+      flag5 = 0;
+      digitalWrite(LED2,ArmState);
+      digitalWrite(LED4,FireState);
+    }
+    // Safe LED
+    if ((CurrSafe == HIGH)&& lastSafe ==HIGH && PowerState == HIGH && ArmState == 0
+    && flag4 ==0)
+    {
+      digitalWrite(RE,HIGH);
+      digitalWrite(DE,HIGH);
+      Serial.write('S');
+      lcd.clear();
+      flag2 = 1;
+      flag3 = 0;
+      flag4 = 0;
+      flag5 = 1;
+      SafeState = true;
+      ArmState = false;
+      FireState = false,lcd.setCursor(4,0),lcd.print("SAFE OK");
+      digitalWrite(LED2,LOW);
+      digitalWrite(LED3,HIGH);
+      digitalWrite(LED4,LOW);
+    }
+  }
+  
+  digitalWrite(RE,LOW);
+  digitalWrite(DE,LOW);
+  char c = Serial.read();
+  if (c == 2)
+  {
+    lcd.clear();
+    lcd.setCursor(4,0);
+    lcd.print("Communication OK");
+  }
+  else
+  {
+    lcd.print("Communication Not OK");
+  }
+
+  lastReset = CurrReset;
+  lastPower = CurrPower;
+  lastSafe = CurrSafe;
+  lastFire = CurrFire;
+  lastArm = CurrArm;
+}
+
+uint8_t rxData;
+uint8_t rxDatacomm;
+uint8_t rxDataComm = 2;
+while (1)
+{
+  if (HAL_UART_Receive(&huart1, &rxData, 1, 100) == HAL_OK)
+  {
+    if (rxDatacomm == 1)
+    {
+      HAL_GPIO_WritePin(GPIOA,GPIO_PIN_8,GPIO_PIN_SET); // DE & RE
+      HAL_UART_Transmit(&huart1, &rxDataComm, 1, 100);
+      HAL_GPIO_WritePin(GPIOA,GPIO_PIN_8,GPIO_PIN_RESET); // DE & RE
+    }
+    if (rxData == 'P')
+    {
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,GPIO_PIN_SET); // Power
+    }
+    else if (rxData == 'A')
+    {
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,GPIO_PIN_SET); // Arm
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_15,GPIO_PIN_RESET); // Arm RESET
+    }
+    else if (rxData == 'F')
+    {
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,GPIO_PIN_SET); // Arm
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_14,GPIO_PIN_SET); // Fire Reset
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_15,GPIO_PIN_SET); // Safe
+    }
+    else if (rxData == 'S')
+    {
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,GPIO_PIN_SET); // Arm RESET
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_14,GPIO_PIN_PIN_RESET); // Fire Reset
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_15,GPIO_PIN_SET); // Safe
+    }
+    else if (rxData == 'R')
+    {
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,GPIO_PIN_PIN_RESET); // Power RESET
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,GPIO_PIN_PIN_RESET); // Arm RESET
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_14,GPIO_PIN_PIN_RESET); // Fire
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_15,GPIO_PIN_PIN_RESET); // Safe
+    }
+  }
+}
